@@ -154,7 +154,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const CORRECT_PIN = "2026";
+const CORRECT_PIN = "7532";
+ const WRITE_SECRET = "weo-summer-2026-x9k";
 
 const STAFF = ["Shay","Tara","Josh","Quinn","Joelle"];
 const COLORS = {
@@ -229,7 +230,8 @@ const schedRef = ref(db, "schedule");
 let firstLoad = true;
 
 onValue(schedRef, (snapshot) => {
-  const data = snapshot.val();
+  const raw = snapshot.val();
+  const data = raw?.data || raw;
   if (data) schedule = migrate(data);
   if (firstLoad) {
     firstLoad = false;
@@ -242,7 +244,7 @@ onValue(schedRef, (snapshot) => {
 });
 
 function pushToFirebase() {
-  set(schedRef, schedule)
+  set(schedRef, { data: schedule, _auth: WRITE_SECRET })
     .then(() => showSaved("✓ Saved"))
     .catch(() => showSaved("⚠ Save failed"));
 }
