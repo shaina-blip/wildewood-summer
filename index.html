@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Wildewood Summer 2026</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, 'Times New Roman', serif; background: #f5f3ee; color: #1a1a14; min-height: 100vh; }
+
+  #header { padding: 28px 40px 24px; border-bottom-width: 3px; border-bottom-style: solid; transition: background 0.4s ease, border-color 0.4s ease; }
+  .header-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .header-title { font-size: 26px; font-weight: normal; color: #fff; letter-spacing: 0.02em; }
+  .header-sub { font-size: 12px; opacity: 0.65; margin-top: 4px; font-family: monospace; color: #fff; }
+  .header-num { font-size: 36px; color: #fff; font-weight: bold; line-height: 1; }
+  .header-slots { font-size: 11px; opacity: 0.7; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; }
+  .header-of { font-size: 11px; opacity: 0.5; margin-top: 2px; color: #fff; }
+  #progress-wrap { margin-top: 18px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; }
+  #progress-bar { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+
+  /* PIN modal */
+  #pin-overlay { position: fixed; inset: 0; background: rgba(245,243,238,0.97); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  #pin-box { background: #fff; border: 1px solid #ddd9d0; border-radius: 12px; padding: 40px 48px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+  #pin-box h2 { font-size: 18px; font-weight: normal; margin-bottom: 6px; color: #1a1a14; }
+  #pin-box p { font-size: 12px; color: #999; margin-bottom: 24px; font-family: monospace; }
+  #pin-input { width: 100%; padding: 12px 16px; font-size: 22px; letter-spacing: 0.4em; text-align: center; border: 2px solid #ddd9d0; border-radius: 6px; font-family: monospace; outline: none; color: #1a1a14; margin-bottom: 12px; transition: border-color 0.2s; }
+  #pin-input:focus { border-color: #FAC0D1; }
+  #pin-input.error { border-color: #a03030; animation: shake 0.3s; }
+  #pin-btn { width: 100%; padding: 12px; background: #FAC0D1; border: none; border-radius: 6px; font-family: Georgia, serif; font-size: 14px; cursor: pointer; color: #6b2a42; font-weight: bold; letter-spacing: 0.05em; transition: background 0.2s; }
+  #pin-btn:hover { background: #f5adc4; }
+  #pin-skip { margin-top: 14px; font-size: 11px; color: #bbb; cursor: pointer; font-family: monospace; letter-spacing: 0.08em; }
+  #pin-skip:hover { color: #999; }
+  #pin-error { font-size: 11px; color: #a03030; margin-top: 8px; min-height: 16px; font-family: monospace; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+  #mode-badge { position: fixed; top: 12px; right: 16px; font-size: 10px; font-family: monospace; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 20px; z-index: 50; }
+  #mode-badge.edit { background: #FAC0D1; color: #6b2a42; }
+  #mode-badge.view { background: #e8e4dc; color: #888; }
+
+  #tabs { display: flex; background: #e8e4dc; border-bottom: 2px solid #ccc8be; overflow-x: auto; }
+  .tab { padding: 14px 28px 12px; border: none; border-bottom: 3px solid transparent; background: transparent; cursor: pointer; font-family: Georgia, serif; font-size: 14px; color: #666; font-weight: normal; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 90px; }
+  .tab.active { background: #fff; font-weight: bold; }
+  .tab-count { font-size: 10px; font-family: monospace; letter-spacing: 0.08em; color: #bbb; }
+
+  #grid-wrap { padding: 24px 32px; overflow-x: auto; }
+  #grid { min-width: 620px; }
+  .day-header-row { display: grid; grid-template-columns: 90px repeat(5, 1fr); gap: 5px; margin-bottom: 4px; }
+  .day-header { text-align: center; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-family: monospace; padding: 6px 0; }
+  .day-booked { font-size: 10px; color: #999; margin-top: 2px; }
+  .hour-row { display: grid; grid-template-columns: 90px repeat(5, 1fr); gap: 5px; margin-bottom: 3px; }
+  .time-label { display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 10px; color: #888; font-family: monospace; }
+  .time-label.on-hour { font-size: 11px; color: #555; font-weight: bold; }
+  .cell { height: 32px; border-radius: 4px; background: #faf9f6; border: 1.5px solid #d4d0c8; font-size: 9px; font-family: monospace; letter-spacing: 0.08em; color: #ccc; transition: all 0.12s ease; display: flex; align-items: center; justify-content: center; position: relative; }
+  .cell.clickable { cursor: pointer; }
+  .cell.readonly { cursor: default; }
+  .cell.booked { color: #fff; font-weight: bold; border-width: 2px; }
+  .cell.half-hour { border-style: dashed; }
+  .cell .note-dot { position: absolute; top: 3px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.8); pointer-events: none; }
+
+  /* Note popup */
+  #note-popup { position: fixed; z-index: 200; background: #fff; border: 1px solid #ddd9d0; border-radius: 10px; padding: 16px 18px; box-shadow: 0 6px 24px rgba(0,0,0,0.12); width: 240px; display: none; }
+  #note-popup .popup-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #aaa; font-family: monospace; margin-bottom: 8px; }
+  #note-popup .popup-slot { font-size: 12px; color: #555; margin-bottom: 10px; font-family: monospace; }
+  #note-textarea { width: 100%; height: 70px; border: 1.5px solid #ddd9d0; border-radius: 5px; padding: 8px; font-family: Georgia, serif; font-size: 12px; color: #1a1a14; resize: none; outline: none; transition: border-color 0.2s; }
+  #note-textarea:focus { border-color: #FAC0D1; }
+  #note-textarea.readonly { background: #faf9f6; cursor: default; color: #555; }
+  .popup-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .popup-save { flex: 1; padding: 7px; background: #FAC0D1; border: none; border-radius: 5px; font-family: Georgia, serif; font-size: 12px; cursor: pointer; color: #6b2a42; font-weight: bold; transition: background 0.2s; }
+  .popup-save:hover { background: #f5adc4; }
+  .popup-close { padding: 7px 12px; background: #f0ede6; border: none; border-radius: 5px; font-family: Georgia, serif; font-size: 12px; cursor: pointer; color: #888; transition: background 0.2s; }
+  .popup-close:hover { background: #e8e4dc; }
+  .popup-unbook { padding: 7px 10px; background: #fff0f0; border: 1px solid #f0c0c0; border-radius: 5px; font-family: Georgia, serif; font-size: 11px; cursor: pointer; color: #a03030; transition: background 0.2s; }
+  .popup-unbook:hover { background: #ffe0e0; }
+
+  #legend { margin-top: 28px; border-top: 1px solid #ddd9d0; padding-top: 18px; display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; }
+  .legend-swatch { width: 22px; height: 22px; border-radius: 4px; }
+  .legend-swatch.half { border-style: dashed; border-width: 1.5px; background: #faf9f6; }
+  #save-status { font-size: 11px; font-style: italic; margin-left: auto; color: #aaa; transition: color 0.3s; }
+
+  #loading-screen { position: fixed; inset: 0; background: #f5f3ee; display: flex; align-items: center; justify-content: center; z-index: 200; flex-direction: column; gap: 12px; }
+  #loading-screen p { font-size: 13px; color: #aaa; font-family: monospace; letter-spacing: 0.1em; }
+  .spinner { width: 28px; height: 28px; border: 3px solid #FAC0D1; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="loading-screen"><div class="spinner"></div><p>Loading schedule...</p></div>
+
+<div id="pin-overlay" style="display:none;">
+  <div id="pin-box">
+    <h2>Wildewood Summer 2026</h2>
+    <p>Enter your PIN to edit, or view as read-only</p>
+    <input id="pin-input" type="password" maxlength="6" placeholder="· · · ·" autocomplete="off" />
+    <div id="pin-error"></div>
+    <button id="pin-btn">Unlock to Edit</button>
+    <div id="pin-skip">View as read-only →</div>
+  </div>
+</div>
+
+<div id="mode-badge" class="view" style="display:none;"></div>
+
+<div id="header">
+  <div class="header-row">
+    <div>
+      <div style="font-size:11px;letter-spacing:0.2em;opacity:0.7;margin-bottom:4px;text-transform:uppercase;color:#fff;">Wildewood Education</div>
+      <div class="header-title">Summer 2026 Availability</div>
+      <div class="header-sub">July 8 – August 21 &nbsp;·&nbsp; Mon – Fri</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="header-num" id="hdr-num">0</div>
+      <div class="header-slots">slots booked</div>
+      <div class="header-of" id="hdr-of">of 0 available</div>
+    </div>
+  </div>
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+</div>
+
+<div id="tabs"></div>
+<div id="grid-wrap">
+  <div id="grid"></div>
+  <div id="legend">
+    <div class="legend-item"><div class="legend-swatch" id="legend-booked-swatch"></div><span>Booked</span></div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#faf9f6;border:1.5px solid #d4d0c8;"></div><span>Open (on the hour)</span></div>
+    <div class="legend-item"><div class="legend-swatch half" id="legend-half-swatch"></div><span>Open (half hour)</span></div>
+    <div class="legend-item"><div style="width:22px;height:22px;border-radius:4px;background:#888;position:relative;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px;"><div style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.8);"></div></div><span>Has a note</span></div>
+    <div id="save-status">Loading...</div>
+  </div>
+</div>
+
+<!-- Note popup -->
+<div id="note-popup">
+  <div class="popup-label">Booking note</div>
+  <div class="popup-slot" id="popup-slot-label"></div>
+  <textarea id="note-textarea" placeholder="e.g. student name, session type..."></textarea>
+  <div class="popup-actions" id="popup-actions"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDCc5NGVUQQWjlfLOsREI49aQC-wrfFzB4",
+  authDomain: "wildewood-summer-2026.firebaseapp.com",
+  databaseURL: "https://wildewood-summer-2026-default-rtdb.firebaseio.com",
+  projectId: "wildewood-summer-2026",
+  storageBucket: "wildewood-summer-2026.firebasestorage.app",
+  messagingSenderId: "1010804628709",
+  appId: "1:1010804628709:web:240cac0494b2a14e5b480c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const CORRECT_PIN = "2026";
+
+const STAFF = ["Shay","Tara","Josh","Quinn","Joelle"];
+const COLORS = {
+  Shay:   { bg:"#FAC0D1", light:"#fff0f5", accent:"#e8a0b8", text:"#6b2a42" },
+  Tara:   { bg:"#5b3fa0", light:"#ece6fa", accent:"#7b5fc0", text:"#2a1a58" },
+  Josh:   { bg:"#2d6e3e", light:"#e2f4e8", accent:"#3d8e52", text:"#0f2e18" },
+  Quinn:  { bg:"#c5b8e8", light:"#f4f1fc", accent:"#a898d4", text:"#3d2e6b" },
+  Joelle: { bg:"#a03030", light:"#fae8e8", accent:"#c04040", text:"#3e0e0e" },
+};
+const STAFF_HOURS = {
+  Shay:   { start:10, end:18 }, Tara: { start:9, end:17 },
+  Josh:   { start:9,  end:17 }, Quinn:{ start:9, end:17 },
+  Joelle: { start:10, end:18 },
+};
+const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
+const DAY_FULL = { Mon:"Monday", Tue:"Tuesday", Wed:"Wednesday", Thu:"Thursday", Fri:"Friday" };
+
+function fmtSlot(h, m) {
+  const suffix = h < 12 ? "AM" : "PM";
+  const hr = h === 0 ? 12 : h <= 12 ? h : h - 12;
+  return m === 0 ? `${hr}:00 ${suffix}` : `${hr}:30 ${suffix}`;
+}
+function getSlots(person) {
+  const { start, end } = STAFF_HOURS[person];
+  const slots = [];
+  for (let h = start; h < end; h++) {
+    slots.push({ key:`${h}_0`,  h, m:0,  label:fmtSlot(h,0),  onHour:true });
+    slots.push({ key:`${h}_30`, h, m:30, label:fmtSlot(h,30), onHour:false });
+  }
+  return slots;
+}
+function getAllKeys() {
+  const keys = [];
+  for (let h = 9; h <= 18; h++) { keys.push(`${h}_0`); keys.push(`${h}_30`); }
+  return keys;
+}
+function initSchedule() {
+  const s = {};
+  STAFF.forEach(p => {
+    s[p] = {};
+    DAYS.forEach(d => {
+      s[p][d] = {};
+      getAllKeys().forEach(k => { s[p][d][k] = { booked: false, note: "" }; });
+    });
+  });
+  return s;
+}
+
+let schedule = initSchedule();
+let active = "Shay";
+let canEdit = false;
+
+// Migrate old boolean format to new object format
+function migrate(data) {
+  STAFF.forEach(p => {
+    if (!data[p]) { data[p] = schedule[p]; return; }
+    DAYS.forEach(d => {
+      if (!data[p][d]) { data[p][d] = schedule[p][d]; return; }
+      getAllKeys().forEach(k => {
+        if (data[p][d][k] === undefined) { data[p][d][k] = { booked: false, note: "" }; return; }
+        if (typeof data[p][d][k] === "boolean") {
+          data[p][d][k] = { booked: data[p][d][k], note: "" };
+        }
+        if (data[p][d][k].note === undefined) data[p][d][k].note = "";
+      });
+    });
+  });
+  return data;
+}
+
+const schedRef = ref(db, "schedule");
+let firstLoad = true;
+
+onValue(schedRef, (snapshot) => {
+  const data = snapshot.val();
+  if (data) schedule = migrate(data);
+  if (firstLoad) {
+    firstLoad = false;
+    document.getElementById("loading-screen").style.display = "none";
+    document.getElementById("pin-overlay").style.display = "flex";
+  } else {
+    render();
+    showSaved("↻ Synced");
+  }
+});
+
+function pushToFirebase() {
+  set(schedRef, schedule)
+    .then(() => showSaved("✓ Saved"))
+    .catch(() => showSaved("⚠ Save failed"));
+}
+
+function showSaved(msg) {
+  const el = document.getElementById("save-status");
+  el.textContent = msg;
+  el.style.color = msg.includes("✓") ? COLORS[active].accent : msg.includes("↻") ? "#aaa" : "#a03030";
+  clearTimeout(window._st);
+  window._st = setTimeout(() => { el.textContent = canEdit ? "Auto-saves on every click" : "Read-only view"; el.style.color = "#aaa"; }, 2000);
+}
+
+// PIN
+document.getElementById("pin-btn").onclick = () => {
+  const val = document.getElementById("pin-input").value.trim();
+  if (val === CORRECT_PIN) {
+    canEdit = true;
+    document.getElementById("pin-overlay").style.display = "none";
+    const badge = document.getElementById("mode-badge");
+    badge.textContent = "✏ EDIT MODE"; badge.className = "edit"; badge.style.display = "block";
+    document.getElementById("save-status").textContent = "Auto-saves on every click";
+    render();
+  } else {
+    const inp = document.getElementById("pin-input");
+    inp.classList.add("error");
+    document.getElementById("pin-error").textContent = "Incorrect PIN — try again";
+    setTimeout(() => { inp.classList.remove("error"); inp.value = ""; }, 800);
+  }
+};
+document.getElementById("pin-input").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("pin-btn").click(); });
+document.getElementById("pin-skip").onclick = () => {
+  canEdit = false;
+  document.getElementById("pin-overlay").style.display = "none";
+  const badge = document.getElementById("mode-badge");
+  badge.textContent = "VIEW ONLY"; badge.className = "view"; badge.style.display = "block";
+  document.getElementById("save-status").textContent = "Read-only view";
+  render();
+};
+
+// Note popup
+let popupState = null;
+const popup = document.getElementById("note-popup");
+
+function openPopup(person, day, slotKey, slotLabel, cellEl) {
+  const slot = schedule[person][day][slotKey];
+  popupState = { person, day, slotKey };
+
+  document.getElementById("popup-slot-label").textContent = `${DAY_FULL[day]} · ${slotLabel}`;
+  const ta = document.getElementById("note-textarea");
+  ta.value = slot.note || "";
+  ta.readOnly = !canEdit;
+  ta.className = canEdit ? "" : "readonly";
+  ta.placeholder = canEdit ? "e.g. student name, session type..." : "No note added.";
+
+  const actions = document.getElementById("popup-actions");
+  actions.innerHTML = "";
+  if (canEdit) {
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "popup-save"; saveBtn.textContent = "Save note";
+    saveBtn.onclick = () => {
+      schedule[person][day][slotKey].note = ta.value.trim();
+      pushToFirebase(); closePopup(); render();
+    };
+    const unbookBtn = document.createElement("button");
+    unbookBtn.className = "popup-unbook"; unbookBtn.textContent = "Unbook";
+    unbookBtn.onclick = () => {
+      schedule[person][day][slotKey] = { booked: false, note: "" };
+      pushToFirebase(); closePopup(); render();
+    };
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "popup-close"; closeBtn.textContent = "Cancel";
+    closeBtn.onclick = closePopup;
+    actions.appendChild(saveBtn);
+    actions.appendChild(unbookBtn);
+    actions.appendChild(closeBtn);
+  } else {
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "popup-save"; closeBtn.textContent = "Close";
+    closeBtn.onclick = closePopup;
+    actions.appendChild(closeBtn);
+  }
+
+  // Position near cell
+  const rect = cellEl.getBoundingClientRect();
+  popup.style.display = "block";
+  const pw = 240, ph = 180;
+  let left = rect.right + 8;
+  let top = rect.top + window.scrollY;
+  if (left + pw > window.innerWidth - 16) left = rect.left - pw - 8;
+  if (top + ph > window.scrollY + window.innerHeight - 16) top = window.scrollY + window.innerHeight - ph - 16;
+  popup.style.left = `${Math.max(8, left)}px`;
+  popup.style.top = `${Math.max(8, top)}px`;
+}
+
+function closePopup() { popup.style.display = "none"; popupState = null; }
+document.addEventListener("mousedown", e => { if (popup.style.display === "block" && !popup.contains(e.target)) closePopup(); });
+
+// Render
+function bookedCount(person) {
+  const slots = getSlots(person);
+  let n = 0;
+  DAYS.forEach(d => slots.forEach(s => { if (schedule[person][d][s.key]?.booked) n++; }));
+  return n;
+}
+
+function renderHeader() {
+  const c = COLORS[active];
+  const slots = getSlots(active);
+  const total = DAYS.length * slots.length;
+  const booked = bookedCount(active);
+  document.getElementById("header").style.background = c.bg;
+  document.getElementById("header").style.borderBottomColor = c.accent;
+  document.getElementById("hdr-num").textContent = booked;
+  document.getElementById("hdr-of").textContent = `of ${total} available`;
+  document.getElementById("progress-bar").style.background = c.light;
+  document.getElementById("progress-bar").style.width = total > 0 ? `${(booked/total)*100}%` : "0%";
+  document.getElementById("legend-booked-swatch").style.background = c.bg;
+  document.getElementById("legend-half-swatch").style.borderColor = c.accent;
+}
+
+function renderTabs() {
+  const el = document.getElementById("tabs");
+  el.innerHTML = "";
+  STAFF.forEach(person => {
+    const c = COLORS[person];
+    const cnt = bookedCount(person);
+    const btn = document.createElement("button");
+    btn.className = "tab" + (person === active ? " active" : "");
+    btn.style.color = person === active ? c.bg : "#666";
+    btn.style.borderBottomColor = person === active ? c.bg : "transparent";
+    btn.innerHTML = `<span>${person}</span><span class="tab-count" style="color:${cnt>0?c.accent:'#bbb'}">${cnt>0?cnt+' booked':'open'}</span>`;
+    btn.onclick = () => { active = person; closePopup(); render(); };
+    el.appendChild(btn);
+  });
+}
+
+function renderGrid() {
+  const c = COLORS[active];
+  const slots = getSlots(active);
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  const headerRow = document.createElement("div");
+  headerRow.className = "day-header-row";
+  headerRow.innerHTML = `<div></div>`;
+  DAYS.forEach(day => {
+    const dayBooked = slots.filter(s => schedule[active][day][s.key]?.booked).length;
+    const div = document.createElement("div");
+    div.className = "day-header";
+    div.style.color = c.bg;
+    div.innerHTML = `<div style="font-weight:bold;">${DAY_FULL[day]}</div><div class="day-booked">${dayBooked>0?dayBooked+' booked':'—'}</div>`;
+    headerRow.appendChild(div);
+  });
+  grid.appendChild(headerRow);
+
+  slots.forEach(slot => {
+    const row = document.createElement("div");
+    row.className = "hour-row";
+    const lbl = document.createElement("div");
+    lbl.className = "time-label" + (slot.onHour ? " on-hour" : "");
+    lbl.textContent = slot.label;
+    row.appendChild(lbl);
+
+    DAYS.forEach(day => {
+      const slotData = schedule[active][day][slot.key] || { booked: false, note: "" };
+      const booked = slotData.booked;
+      const hasNote = booked && slotData.note && slotData.note.trim().length > 0;
+      const cell = document.createElement("button");
+      cell.className = "cell " + (canEdit || booked ? "clickable" : "readonly") + (booked ? " booked" : "") + (!slot.onHour ? " half-hour" : "");
+      cell.title = booked ? (hasNote ? slotData.note : `${DAY_FULL[day]} ${slot.label}`) : (canEdit ? `${DAY_FULL[day]} ${slot.label}` : "");
+
+      if (hasNote) {
+        const dot = document.createElement("div");
+        dot.className = "note-dot";
+        cell.appendChild(dot);
+      }
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = booked ? "BOOKED" : "";
+      cell.appendChild(textSpan);
+
+      const applyStyle = (isHov) => {
+        if (booked) {
+          cell.style.background = c.bg;
+          cell.style.borderColor = c.accent;
+          cell.style.borderStyle = "solid";
+          cell.style.boxShadow = isHov ? `0 3px 8px ${c.bg}66` : `0 2px 5px ${c.bg}44`;
+          cell.style.color = "#fff";
+        } else if (isHov && canEdit) {
+          cell.style.background = c.light;
+          cell.style.borderColor = c.accent;
+          cell.style.borderStyle = "solid";
+          cell.style.color = c.text;
+          textSpan.textContent = "+";
+        } else {
+          cell.style.background = "#faf9f6";
+          cell.style.borderColor = "#d4d0c8";
+          cell.style.borderStyle = slot.onHour ? "solid" : "dashed";
+          cell.style.color = "#ccc";
+          cell.style.boxShadow = "none";
+          if (!booked) textSpan.textContent = "";
+        }
+      };
+
+      applyStyle(false);
+      cell.onmouseenter = () => applyStyle(true);
+      cell.onmouseleave = () => applyStyle(false);
+
+      cell.onclick = () => {
+        if (booked) {
+          openPopup(active, day, slot.key, slot.label, cell);
+        } else if (canEdit) {
+          schedule[active][day][slot.key] = { booked: true, note: "" };
+          pushToFirebase();
+          render();
+        }
+      };
+      row.appendChild(cell);
+    });
+    grid.appendChild(row);
+  });
+}
+
+function render() { renderHeader(); renderTabs(); renderGrid(); }
+</script>
+</body>
+</html>
